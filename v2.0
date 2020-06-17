@@ -1,0 +1,82 @@
+##################### Weekly Reboot Script
+##################### By Arlandus Brown III
+
+                        #Synopsis
+# Script is to reboot designated servers. Main functions are as follows....
+
+#1. Message all logged in users of shutdown and give them time to log off
+#2. Connect to vsphere and Shutdown all the VMs in your text file
+#3. Disconnect the NIC on all VMs (This keeps people from hammering the servers before they are fully up again)
+#4. Turn all the VMs back on again
+#5. Reconnect the NICs to allow for logins again
+
+######## Script Starts Here ########
+
+#Uncomment next line if you need to install powercli module if you don't have it 
+#Install-Module -Name VMware.PowerCLI
+
+#Connect to your vsphere server
+set-powercliconfiguration -DefaultVIServerMode single -InvalidCertificateAction ignore -scope user -Confirm:$false
+connect-viserver –server yourvsphereserver.netchc.local
+
+#Your file containing the names of your servers. They must match vsphere not DNS.
+$virtualmachines = Get-Content 'C:\scripts\ps-weeklyreboot\virtualmachines.txt'
+
+
+#Send message to all users about the shutdown
+        
+        #foreach ($VM in $virtualmachines)
+
+        #{
+
+       #msg * /server $VM /time:0 /v "Computer services are going down for the weekly 1:00 a.m refresh. You have 10 minutes before they begin. Services will resume at approximately 2:00 a.m"
+
+        #} 
+
+#Pause give users time to finish work and log off
+#Start-Sleep 300
+
+#Shutdown all the VMs
+        foreach ($VM in $virtualmachines)
+
+        {
+
+        Shutdown-VMGuest -VM $VM -Confirm:$false
+
+        }
+
+#Pause give the VMs time to shut down
+Start-Sleep 1800
+
+#Disable Connect at boot NIC on each VM 
+        foreach ($VM in $virtualmachines)
+
+        {
+
+        Get-VM $VM | Get-NetworkAdapter | Set-NetworkAdapter -StartConnected:$false -Confirm:$false
+
+        }
+
+
+
+#Turn all the VMs back on
+        foreach ($VM in $virtualmachines)
+
+        {
+
+       
+        Start-VM -VM $VM -Confirm:$false
+
+        }
+
+#Pause to give all the VMs time to boot up        
+        Start-Sleep 1800
+
+#Reconnect NIC each VM
+        foreach ($VM in $virtualmachines)
+
+        {
+
+        Get-VM $VM | Get-NetworkAdapter | Set-NetworkAdapter -Connected:$true -Confirm:$false
+
+        }
